@@ -1,0 +1,37 @@
+version: '3.5'
+
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/tmp/docker.sock:ro"
+      - "./proxy_settings.conf:/etc/nginx/conf.d/my_custom_proxy_settings.conf"
+      - ./letsencrypt/certs:/etc/nginx/certs
+      - ./letsencrypt/vhost-d:/etc/nginx/vhost.d
+      - ./letsencrypt/html:/usr/share/nginx/html
+
+  letsencrypt-proxy:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: letsencrypt-proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt/certs:/etc/nginx/certs
+      - ./letsencrypt/vhost-d:/etc/nginx/vhost.d
+      - ./letsencrypt/html:/usr/share/nginx/html
+    environment:
+      - DEFAULT_EMAIL=some_email@whoami.example.com
+      - NGINX_PROXY_CONTAINER=nginx-proxy
+    depends_on:
+      - "nginx-proxy"
+  whoami:
+    image: jwilder/whoami
+    environment:
+      - VIRTUAL_HOST=whoami.example.com
+
+networks:
+  default:
+    driver: bridge
+    name: proxy
